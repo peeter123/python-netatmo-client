@@ -13,7 +13,7 @@ version_file = '%s/%s/__init__.py' % (src_dir, package_directory)
 with open(version_file, 'r') as f:
     for line in f.readlines():
         if line.find('__version__') >= 0:
-            exec line
+            exec(line)
             break
     else:
         raise AssertionError('Failed to load version from %s' % version_file)

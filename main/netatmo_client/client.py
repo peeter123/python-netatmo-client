@@ -1,8 +1,8 @@
-import httplib
+import http.client
 import json
 import logging
 import os
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 import requests
 
@@ -187,7 +187,7 @@ class NetatmoClient(object):
                           scope=' '.join(scopes),
                           state=state)
         return '%s?%s' % (NetatmoClient.AUTHORIZED_URL,
-                          '&'.join('%s=%s' % (k, urllib.quote(v, safe='~()*!.\'')) for k, v in parameters.items()))
+                          '&'.join('%s=%s' % (k, urllib.parse.quote(v, safe='~()*!.\'')) for k, v in list(parameters.items())))
 
     def request_token_with_code(self, code, redirect_uri, *scopes):
         form = dict(client_id=self.client_id,
@@ -257,7 +257,7 @@ class NetatmoClient(object):
             response = NetatmoClient._invoke(method,
                                              '%s%s' % (NetatmoClient.API_BASE_URL, uri),
                                              **kwargs)
-        except InvalidStatusCode, i:
+        except InvalidStatusCode as i:
             if NetatmoClient._is_token_expired(i):
                 try:
                     self.request_refresh_token()
@@ -265,7 +265,7 @@ class NetatmoClient(object):
                     response = NetatmoClient._invoke(method,
                                                      '%s%s' % (NetatmoClient.API_BASE_URL, uri),
                                                      **kwargs)
-                except InvalidStatusCode, other:
+                except InvalidStatusCode as other:
                     if other.status_code / 100 == 4:
                         self._access_token = None
                         self._refresh_token = None
@@ -278,7 +278,7 @@ class NetatmoClient(object):
             result = response.json()
             _logger.debug('%s - %s', uri, json.dumps(result))
             if result['status'] != "ok":
-                raise InvalidStatusCode(httplib.INTERNAL_SERVER_ERROR, result)
+                raise InvalidStatusCode(http.client.INTERNAL_SERVER_ERROR, result)
             else:
                 return result.get('body')
 
@@ -290,7 +290,7 @@ class NetatmoClient(object):
 
     @staticmethod
     def _is_token_expired(i):
-        if i.status_code == httplib.FORBIDDEN and type(i.body) == dict and i.body.get('error') is not None:
+        if i.status_code == http.client.FORBIDDEN and type(i.body) == dict and i.body.get('error') is not None:
             code = i.body['error'].get('code')
             return code == NetatmoClient.INVALID_ACCESS_TOKEN or code == NetatmoClient.ACCESS_TOKEN_EXPIRED
         else:
@@ -311,6 +311,6 @@ class NetatmoClient(object):
         else:
             try:
                 body = response.json()
-            except Exception, _:
+            except Exception as _:
                 body = response.text
             raise InvalidStatusCode(response.status_code, body)
